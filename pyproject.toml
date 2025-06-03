@@ -1,0 +1,11 @@
+[project]
+name = "fulcra-mcp-python"
+version = "0.1.0"
+description = "Fulcra Context MCP Server"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp>=2.5.2",
+    "fulcra-api>=0.1.23",
+    "structlog>=25.4.0",
+]
