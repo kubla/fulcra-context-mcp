@@ -7,5 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "fastmcp>=2.5.2",
     "fulcra-api>=0.1.23",
+    "httpx>=0.28.1",
+    "mcp[cli]>=1.9.2",
     "structlog>=25.4.0",
 ]

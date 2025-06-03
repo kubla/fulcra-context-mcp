@@ -168,23 +168,6 @@ wheels = [
 ]
 
 [[package]]
-name = "fastmcp-test"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "fastmcp" },
-    { name = "fulcra-api" },
-    { name = "structlog" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "fastmcp", specifier = ">=2.5.2" },
-    { name = "fulcra-api", specifier = ">=0.1.23" },
-    { name = "structlog", specifier = ">=25.4.0" },
-]
-
-[[package]]
 name = "fulcra-api"
 version = "0.1.23"
 source = { registry = "https://pypi.org/simple" }
@@ -196,6 +179,27 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/fe/d4/589db59581f5842d97490458a32ea5a7a03c2a2620c0ae7d86340dc489ca/fulcra_api-0.1.23.tar.gz", hash = "sha256:1172f53859e0fff7564155cb3b9bf0e55f4bb23d59ca54a5e5422aa7958d5dd5", size = 14054, upload-time = "2025-04-23T17:53:45.863Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3a/24/621f06a1214683f36974dcf2842cd1337092bf83db5840bc1186a9bea400/fulcra_api-0.1.23-py3-none-any.whl", hash = "sha256:01cafa4883b7430f4b62f1857f4d0844e64c83a00c224413ab52c5a09393a220", size = 14726, upload-time = "2025-04-23T17:53:44.943Z" },
+]
+
+[[package]]
+name = "fulcra-mcp-python"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "fastmcp" },
+    { name = "fulcra-api" },
+    { name = "httpx" },
+    { name = "mcp", extra = ["cli"] },
+    { name = "structlog" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastmcp", specifier = ">=2.5.2" },
+    { name = "fulcra-api", specifier = ">=0.1.23" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.9.2" },
+    { name = "structlog", specifier = ">=25.4.0" },
 ]
 
 [[package]]
@@ -283,6 +287,12 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ea/03/77c49cce3ace96e6787af624611b627b2828f0dca0f8df6f330a10eea51e/mcp-1.9.2.tar.gz", hash = "sha256:3c7651c053d635fd235990a12e84509fe32780cd359a5bbef352e20d4d963c05", size = 333066, upload-time = "2025-05-29T14:42:17.76Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5d/a6/8f5ee9da9f67c0fd8933f63d6105f02eabdac8a8c0926728368ffbb6744d/mcp-1.9.2-py3-none-any.whl", hash = "sha256:bc29f7fd67d157fef378f89a4210384f5fecf1168d0feb12d22929818723f978", size = 131083, upload-time = "2025-05-29T14:42:16.211Z" },
+]
+
+[package.optional-dependencies]
+cli = [
+    { name = "python-dotenv" },
+    { name = "typer" },
 ]
 
 [[package]]
