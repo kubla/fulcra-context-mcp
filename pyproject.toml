@@ -1,5 +1,5 @@
 [project]
-name = "fulcra-mcp-python"
+name = "mcp-server-python"
 version = "0.1.0"
 description = "Fulcra Context MCP Server"
 readme = "README.md"
