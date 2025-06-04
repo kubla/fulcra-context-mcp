@@ -109,7 +109,6 @@ class FulcraOAuthProvider(OAuthProvider):
                 redirect_uri=f"{SERVER_URL}/callback",
             )
             access_token = fulcra.get_cached_access_token()
-            logger.info(f"XXX access token is {access_token}")
             new_code = f"mcp_{secrets.token_hex(16)}"
             # Create MCP authorization code
             auth_code = AuthorizationCode(
@@ -259,7 +258,6 @@ async def get_workouts(
         start_time: The starting time of the period in question.
         end_time: the ending time of the period in question.
     """
-    logger.info("XXX tool")
     fulcra = get_fulcra_object()
     workouts = fulcra.apple_workouts(start_time, end_time)
     return f"Workouts during {start_time} and {end_time}: " + json.dumps(workouts)
