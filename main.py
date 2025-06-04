@@ -4,6 +4,7 @@ import secrets
 import time
 
 from starlette.responses import JSONResponse
+from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.settings import ClientRegistrationOptions, RevocationOptions
 from mcp.server.auth.provider import (
     AccessToken,
@@ -108,6 +109,7 @@ class FulcraOAuthProvider(OAuthProvider):
                 redirect_uri=f"{SERVER_URL}/callback",
             )
             access_token = fulcra.get_cached_access_token()
+            logger.info(f"XXX access token is {access_token}")
             new_code = f"mcp_{secrets.token_hex(16)}"
             # Create MCP authorization code
             auth_code = AuthorizationCode(
@@ -120,16 +122,15 @@ class FulcraOAuthProvider(OAuthProvider):
                 code_challenge=code_challenge,
             )
             self.auth_codes[new_code] = auth_code
-        except Exception as e:
-            logger.error("oauth2 code exchange failure", exc_info=e)
-            raise HTTPException(400, "failed to exchange code for token")
-
             self.tokens[access_token] = AccessToken(
                 token=access_token,
                 client_id=client_id,
                 scopes=OIDC_SCOPES,
                 expires_at=None,
             )
+        except Exception as e:
+            logger.error("oauth2 code exchange failure", exc_info=e)
+            raise HTTPException(400, "failed to exchange code for token")
 
         del self.state_mapping[state]
         return construct_redirect_uri(redirect_uri, code=new_code, state=state)
@@ -145,7 +146,43 @@ class FulcraOAuthProvider(OAuthProvider):
     async def exchange_authorization_code(
         self, client: OAuthClientInformationFull, authorization_code: AuthorizationCode
     ) -> OAuthToken:
-        raise Exception("XXX unimplemented")
+        if authorization_code.code not in self.auth_codes:
+            raise ValueError("Invalid authorization code")
+
+        # Generate MCP access token
+        mcp_token = f"mcp_{secrets.token_hex(32)}"
+
+        # Store MCP token
+        self.tokens[mcp_token] = AccessToken(
+            token=mcp_token,
+            client_id=client.client_id,
+            scopes=authorization_code.scopes,
+            expires_at=int(time.time()) + 3600,
+        )
+
+        # Find GitHub token for this client
+        oidc_token = next(
+            (
+                token
+                for token, data in self.tokens.items()
+                # see https://github.blog/engineering/platform-security/behind-githubs-new-authentication-token-formats/
+                # which you get depends on your GH app setup.
+                if data.client_id == client.client_id
+            ),
+            None,
+        )
+
+        if oidc_token:
+            self.token_mapping[mcp_token] = oidc_token
+
+        del self.auth_codes[authorization_code.code]
+
+        return OAuthToken(
+            access_token=mcp_token,
+            token_type="bearer",
+            expires_in=3600,
+            scope=" ".join(authorization_code.scopes),
+        )
 
     async def load_access_token(self, token: str) -> AccessToken | None:
         """Load and validate an access token."""
@@ -189,7 +226,7 @@ oauth_provider = FulcraOAuthProvider(
           valid_scopes=OIDC_SCOPES,
           default_scopes=OIDC_SCOPES,
           ),
-      required_scopes=["user"],
+      required_scopes=["openid"],
 )
 mcp = FastMCP(
     name="Fulcra Context Agent",
@@ -200,8 +237,21 @@ mcp = FastMCP(
     auth=oauth_provider,
 )
 
+def get_fulcra_object() -> FulcraAPI:
+    mcp_access_token = get_access_token()
+    if not mcp_access_token:
+        raise HTTPException(401, "Not authenticated")
+    fulcra_token = oauth_provider.token_mapping.get(mcp_access_token.token)
+    if fulcra_token is None:
+        raise HTTPException(401, "Not authenticated")
+    fulcra = FulcraAPI()
+    fulcra.set_cached_access_token(fulcra_token)
+    return fulcra
+
 @mcp.tool()
-async def get_workouts(start_time: datetime, end_time: datetime
+async def get_workouts(
+        start_time: datetime, 
+        end_time: datetime
 ) -> str:
     """Get details about the workouts that the user has done during a period of time.
 
@@ -209,6 +259,8 @@ async def get_workouts(start_time: datetime, end_time: datetime
         start_time: The starting time of the period in question.
         end_time: the ending time of the period in question.
     """
+    logger.info("XXX tool")
+    fulcra = get_fulcra_object()
     workouts = fulcra.apple_workouts(start_time, end_time)
     return f"Workouts during {start_time} and {end_time}: " + json.dumps(workouts)
 
@@ -217,10 +269,6 @@ async def get_workouts(start_time: datetime, end_time: datetime
 
 mcp_asgi_app = mcp.http_app(path="/")
 app = FastAPI(lifespan=mcp_asgi_app.lifespan, debug=True)
-
-@app.get("/fff")
-async def health_check(request: Request) -> JSONResponse:
-    return JSONResponse({"status": "ok"})
 
 #@mcp.custom_route("/callback", methods=["GET"])
 @app.get("/callback")
