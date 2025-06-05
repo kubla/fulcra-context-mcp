@@ -233,16 +233,16 @@ wheels = [
 
 [[package]]
 name = "fulcra-api"
-version = "0.1.24"
+version = "0.1.25"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "pandas" },
     { name = "pyarrow" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/54/0f/3f6aacacbf5ce4b5e20fe6f28466d5d4af0e21919599f5c35368deee35c3/fulcra_api-0.1.24.tar.gz", hash = "sha256:49e4ffa2893952a32f09750bae1291b2c0acfda394c3005495618b34effd291b", size = 15519, upload-time = "2025-06-04T15:53:56.981Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/70/83/e446aef46bfc1e789dd6154ff371ba25bf8541971978ea9c4f752b50d526/fulcra_api-0.1.25.tar.gz", hash = "sha256:3a694c6d89b391410716e7ab2e669f75a0ff632a29feb0d125bfb6e5e11ff39b", size = 16763, upload-time = "2025-06-05T20:53:50.003Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6e/d6/416220d6ef5a903af0dafa6a0c369ca7c2b56937508f679ce3ee7d1ababa/fulcra_api-0.1.24-py3-none-any.whl", hash = "sha256:d755a20fc5ac2bcfeffb9759dc2e56dc0fa4cd12c1533d6f416925264f390560", size = 16243, upload-time = "2025-06-04T15:53:55.554Z" },
+    { url = "https://files.pythonhosted.org/packages/24/40/3b9b25dda96225816cc1cec2f7ba94827463f00b88abffcc19991a9f9468/fulcra_api-0.1.25-py3-none-any.whl", hash = "sha256:eed7a8fe4062c260b3d2b78714fa15e0629f75be98d0c3c31105ebf82a53262e", size = 17537, upload-time = "2025-06-05T20:53:48.641Z" },
 ]
 
 [[package]]
@@ -427,7 +427,7 @@ dependencies = [
 requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.12" },
     { name = "fastmcp", specifier = ">=2.7.0" },
-    { name = "fulcra-api", specifier = ">=0.1.24" },
+    { name = "fulcra-api", specifier = ">=0.1.25" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.9.2" },
     { name = "structlog", specifier = ">=25.4.0" },

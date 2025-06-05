@@ -326,6 +326,87 @@ async def get_metric_time_series(
     return f"Time series data for {metric_name} from {start_time} to {end_time}: " + time_series_df.to_json(orient="records", date_format="iso", default_handler=str)
 
 
+@mcp.tool()
+async def get_metric_samples(
+    metric_name: str,
+    start_time: datetime,
+    end_time: datetime,
+) -> str:
+    """Retrieve the raw samples related to a given metric for the user during a specified period.
+
+    In cases where samples cover ranges and not points in time, a sample will be returned
+    if any part of its range intersects with the requested range. For example, if start_time
+    is 14:00 and end_time is 15:00, a sample covering 13:30-14:30 will be included.
+    Result timestamps will include time zones. Always translate timestamps to the user's local
+    time zone when this is known.
+
+    Args:
+        metric_name: The name of the metric to retrieve samples for. Use `get_metrics_catalog` to find available metrics.
+        start_time: The start of the time range (inclusive), as an ISO 8601 string or datetime object.
+        end_time: The end of the time range (exclusive), as an ISO 8601 string or datetime object.
+    Returns:
+        A JSON string representing a list of raw samples for the metric.
+    """
+    fulcra = get_fulcra_object()
+    samples_df = fulcra.metric_samples(
+        metric=metric_name,
+        start_time=start_time,
+        end_time=end_time,
+    )
+    # Convert DataFrame to JSON. `orient='records'` gives a list of dicts.
+    # `date_format='iso'` ensures datetimes are ISO8601 strings.
+    return f"Raw samples for {metric_name} from {start_time} to {end_time}: " + samples_df.to_json(orient="records", date_format="iso", default_handler=str)
+
+
+@mcp.tool()
+async def get_sleep_cycles(
+    start_time: datetime,
+    end_time: datetime,
+    cycle_gap: str | None = None,
+    stages: list[int] | None = None,
+    gap_stages: list[int] | None = None,
+    clip_to_range: bool | None = True,
+) -> str:
+    """Return sleep cycles summarized from sleep stages.
+
+    Processes raw sleep data samples into sleep cycles by finding gaps in the
+    sleep sample data within a specified time interval.
+    Result timestamps will include time zones. Always translate timestamps to the user's local
+    time zone when this is known.
+
+    Args:
+        start_time: The starting timestamp (inclusive), as an ISO 8601 string or datetime object.
+        end_time: The ending timestamp (exclusive), as an ISO 8601 string or datetime object.
+        cycle_gap: Optional. Minimum time interval separating distinct cycles (e.g., "PT2H" for 2 hours).
+                   Defaults to server-side default if not provided.
+        stages: Optional. Sleep stages to include. Defaults to all stages if not provided.
+        gap_stages: Optional. Sleep stages to consider as gaps in sleep cycles.
+                    Defaults to server-side default if not provided.
+        clip_to_range: Optional. Whether to clip the data to the requested date range. Defaults to True.
+    Returns:
+        A JSON string representing a pandas DataFrame containing the sleep cycle data.
+    """
+    fulcra = get_fulcra_object()
+    kwargs = {}
+    if cycle_gap is not None:
+        kwargs["cycle_gap"] = cycle_gap
+    if stages is not None:
+        kwargs["stages"] = stages
+    if gap_stages is not None:
+        kwargs["gap_stages"] = gap_stages
+    if clip_to_range is not None:
+        kwargs["clip_to_range"] = clip_to_range
+
+    sleep_cycles_df = fulcra.sleep_cycles(
+        start_time=start_time,
+        end_time=end_time,
+        **kwargs,
+    )
+    # Convert DataFrame to JSON. `orient='records'` gives a list of dicts.
+    # `date_format='iso'` ensures datetimes are ISO8601 strings.
+    return f"Sleep cycles from {start_time} to {end_time}: " + sleep_cycles_df.to_json(orient="records", date_format="iso", default_handler=str)
+
+
 mcp_asgi_app = mcp.http_app(path="/")
 app = FastAPI(lifespan=mcp_asgi_app.lifespan, debug=True)
 
