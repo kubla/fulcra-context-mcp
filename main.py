@@ -255,6 +255,8 @@ async def get_workouts(
         end_time: datetime
 ) -> str:
     """Get details about the workouts that the user has done during a period of time.
+    Result timestamps will include time zones. Always translate timestamps to the user's local
+    time zone when this is known.
 
     Args:
         start_time: The starting time of the period. Must include tz (ISO8601).
@@ -263,8 +265,6 @@ async def get_workouts(
     fulcra = get_fulcra_object()
     workouts = fulcra.apple_workouts(start_time, end_time)
     return f"Workouts during {start_time} and {end_time}: " + json.dumps(workouts)
-
-
 
 
 mcp_asgi_app = mcp.http_app(path="/")
