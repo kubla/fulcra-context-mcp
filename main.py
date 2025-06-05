@@ -32,6 +32,7 @@ SERVER_URL = "http://localhost:4499"
 class Settings(BaseSettings):
     oidc_server_url: str = SERVER_URL
     fulcra_environment: str = "localdev"
+    port: int = 8080
     oidc_client_id: str = "tc92NeNkAg748rlxBbm79cKdG9AOAbfc"        # XXX XXX XXX XXX XXX
 
 settings = Settings()
@@ -292,4 +293,4 @@ app.mount("/", mcp_asgi_app)
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=4499)
+    uvicorn.run(app, host="0.0.0.0", port=settings.port)
