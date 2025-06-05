@@ -30,6 +30,7 @@ OIDC_SCOPES = ["openid", "profile", "name", "email"]
 SERVER_URL = "http://localhost:4499"
 
 class Settings(BaseSettings):
+    oidc_server_url: str = SERVER_URL
     fulcra_environment: str = "localdev"
     oidc_client_id: str = "tc92NeNkAg748rlxBbm79cKdG9AOAbfc"        # XXX XXX XXX XXX XXX
 
@@ -83,7 +84,7 @@ class FulcraOAuthProvider(OAuthProvider):
             oidc_client_id=settings.oidc_client_id,
         )
         auth_url = fulcra.get_authorization_code_url(
-                redirect_uri=f"{SERVER_URL}/callback",              # XXX XXX XXX
+                redirect_uri=f"{settings.oidc_server_url}/callback",              # XXX XXX XXX
                 state=state,
         )
         return auth_url
@@ -106,7 +107,7 @@ class FulcraOAuthProvider(OAuthProvider):
         try:
             fulcra.authorize_with_authorization_code(
                 code=code,
-                redirect_uri=f"{SERVER_URL}/callback",
+                redirect_uri=f"{settings.oidc_server_url}/callback",
             )
             access_token = fulcra.get_cached_access_token()
             new_code = f"mcp_{secrets.token_hex(16)}"
@@ -219,7 +220,7 @@ class FulcraOAuthProvider(OAuthProvider):
             del self.tokens[token]
 
 oauth_provider = FulcraOAuthProvider(
-      issuer_url=AnyHttpUrl(SERVER_URL),
+      issuer_url=AnyHttpUrl(settings.oidc_server_url),
       client_registration_options=ClientRegistrationOptions(
           enabled=True,
           valid_scopes=OIDC_SCOPES,
