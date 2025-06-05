@@ -267,6 +267,65 @@ async def get_workouts(
     return f"Workouts during {start_time} and {end_time}: " + json.dumps(workouts)
 
 
+@mcp.tool()
+async def get_metrics_catalog() -> str:
+    """Get the catalog of available metrics that can be used in time-series API calls
+    (`metric_time_series` and `metric_samples`).
+    """
+    fulcra = get_fulcra_object()
+    catalog = fulcra.metrics_catalog()
+    return "Available metrics: " + json.dumps(catalog)
+
+
+@mcp.tool()
+async def get_metric_time_series(
+    metric_name: str,
+    start_time: datetime,
+    end_time: datetime,
+    sample_rate: float | None = 60.0,
+    replace_nulls: bool | None = False,
+    calculations: list[str] | None = None,
+) -> str:
+    """Get user's time-series data for a single Fulcra metric.
+
+    Covers the time starting at start_time (inclusive) until end_time (exclusive).
+    Result timestamps will include tz. Always translate timestamps to the user's local
+    tz when this is known.
+
+    Args:
+        metric_name: The name of the time-series metric to retrieve. Use `get_metrics_catalog` to find available metrics.
+        start_time: The starting time period (inclusive). Must include tz (ISO8601).
+        end_time: The ending time (exclusive). Must include tz (ISO8601).
+        sample_rate: Optional. The number of seconds per sample. Default is 60. Can be smaller than 1.
+        replace_nulls: Optional. When true, replace all NA with 0. Default is False.
+        calculations: Optional. A list of additional calculations to perform for each
+        time slice.  Not supported on cumulative metrics.  Options: "max", "min", "delta", "mean", "uniques", "allpoints", "rollingmean".
+    Returns:
+        A JSON string representing a list of data points for the metric.
+        For time ranges where data is missing, the values will be NA unless replace_nulls is true.
+    """
+    fulcra = get_fulcra_object()
+    # Ensure defaults are passed correctly if None
+    kwargs = {}
+    if sample_rate is not None:
+        kwargs["sample_rate"] = sample_rate
+    if replace_nulls is not None:
+        kwargs["replace_nulls"] = replace_nulls
+    if calculations is not None:
+        kwargs["calculations"] = calculations
+
+    time_series_df = fulcra.metric_time_series(
+        metric=metric_name,
+        start_time=start_time,
+        end_time=end_time,
+        **kwargs,
+    )
+    # Convert DataFrame to JSON. `orient='records'` gives a list of dicts.
+    # `date_format='iso'` ensures datetimes are ISO8601 strings.
+    # `default_handler=str` can help with any other non-serializable types, though less likely with typical DataFrame content.
+    return f"Time series data for {metric_name} from {start_time} to {end_time}: " + time_series_df.to_json(orient="records", date_format="iso", default_handler=str)
+
+
 mcp_asgi_app = mcp.http_app(path="/")
 app = FastAPI(lifespan=mcp_asgi_app.lifespan, debug=True)
 
