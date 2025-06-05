@@ -214,7 +214,7 @@ standard = [
 
 [[package]]
 name = "fastmcp"
-version = "2.6.1"
+version = "2.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "authlib" },
@@ -225,11 +225,10 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "rich" },
     { name = "typer" },
-    { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ad/d2/5bd3cf09b63e51c3e10ece07a1031cfe362cf080bb0155e6b894414301b5/fastmcp-2.6.1.tar.gz", hash = "sha256:212f15a4edf8289e5c3c70796910dc612ef891f84df3257a277457bb761d1362", size = 1585121, upload-time = "2025-06-03T13:31:14.354Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ad/a5/d156051c08915c2ca7c97583dac4547f17fcbf09918727c36ca0e6cd6ea7/fastmcp-2.7.0.tar.gz", hash = "sha256:6a081400ed46e1b74fbda3f5b7f806180f4091b7bf36bd4c52d7074934767004", size = 1590831, upload-time = "2025-06-05T19:03:51.778Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/33/b452a453f62e9b7f6b3f0f263dffb2fa155bc1cab3c69902f7d32b11d9d1/fastmcp-2.6.1-py3-none-any.whl", hash = "sha256:d83a2fcffa721cbb91b29c738d39de20b54e1b1ebef5be652d6a4956ecac7ad3", size = 125910, upload-time = "2025-06-03T13:31:12.315Z" },
+    { url = "https://files.pythonhosted.org/packages/74/3f/88fd54bbec9a3c619f94c61b84473a49c3af24582a9cc64059fdefeef98b/fastmcp-2.7.0-py3-none-any.whl", hash = "sha256:5e0827a37bc71656edebb5f217423ce6f838d8f0e42f79c9f803349c0366fc80", size = 127452, upload-time = "2025-06-05T19:03:50.129Z" },
 ]
 
 [[package]]
@@ -427,7 +426,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.12" },
-    { name = "fastmcp", specifier = ">=2.6.1" },
+    { name = "fastmcp", specifier = ">=2.7.0" },
     { name = "fulcra-api", specifier = ">=0.1.24" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.9.2" },

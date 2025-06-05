@@ -257,8 +257,8 @@ async def get_workouts(
     """Get details about the workouts that the user has done during a period of time.
 
     Args:
-        start_time: The starting time of the period in question.
-        end_time: the ending time of the period in question.
+        start_time: The starting time of the period. Must include tz (ISO8601).
+        end_time: the ending time of the period. Must include tz (ISO8601).
     """
     fulcra = get_fulcra_object()
     workouts = fulcra.apple_workouts(start_time, end_time)
@@ -270,7 +270,6 @@ async def get_workouts(
 mcp_asgi_app = mcp.http_app(path="/")
 app = FastAPI(lifespan=mcp_asgi_app.lifespan, debug=True)
 
-#@mcp.custom_route("/callback", methods=["GET"])
 @app.get("/callback")
 async def callback_handler(request: Request) -> Response:
     code = request.query_params.get("code")
