@@ -1,7 +1,8 @@
 [project]
 name = "fulcra-context-mcp"
-version = "0.1.1"
+version = "0.1.2"
 description = "Fulcra Context MCP Server"
+license = "Apache-2.0"
 authors = [
     {name = "Brandon Creighton", email = "brandon@fulcradynamics.com"},
 ]
