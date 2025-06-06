@@ -449,6 +449,55 @@ async def get_location_at_time(
     return f"Location info at {time}: " + json.dumps(location_data)
 
 
+@mcp.tool()
+async def get_location_time_series(
+    start_time: datetime,
+    end_time: datetime,
+    change_meters: float | None = None,
+    sample_rate: int | None = 900,
+    reverse_geocode: bool | None = False,
+) -> str:
+    """Retrieve a time series of locations that the user was at. 
+    Result timestamps will include time zones. Always translate timestamps to the user's local tz when this is known.
+
+    Args:
+        start_time: The start of the time range (inclusive), as an ISO 8601 string or datetime object.
+        end_time: The end of the range (exclusive), as an ISO 8601 string or datetime object.
+        change_meters: Optional. When specified, subsequent samples that are fewer than this many meters away will not be included.
+        sample_rate: Optional. The length (in seconds) of each sample. Default is 900.
+        reverse_geocode: Optional. When true, Fulcra will attempt to reverse geocode the locations and include the details in the results. Default is False.
+    Returns:
+        A JSON string representing a list of location data points.
+    """
+    fulcra = get_fulcra_object()
+    kwargs = {}
+    if change_meters is not None:
+        kwargs["change_meters"] = change_meters
+    if sample_rate is not None:
+        kwargs["sample_rate"] = sample_rate
+    kwargs["look_back"] = 14400
+    if reverse_geocode is not None:
+        kwargs["reverse_geocode"] = reverse_geocode
+
+    location_series = fulcra.location_time_series(
+        start_time=start_time,
+        end_time=end_time,
+        **kwargs,
+    )
+    return f"Location time series from {start_time} to {end_time}: " + json.dumps(location_series)
+
+
+@mcp.tool()
+async def get_user_info() -> str:
+    """Return general info about the Context by Fulcra user.
+
+    Returns user references such as time zone, calendar ids, and other metadata.
+    """
+    fulcra = get_fulcra_object()
+    user_info = fulcra.get_user_info()
+    return "User information: " + json.dumps(user_info)
+
+
 mcp_asgi_app = mcp.http_app(path="/")
 app = FastAPI(lifespan=mcp_asgi_app.lifespan, debug=True)
 
