@@ -1,5 +1,9 @@
 ## fulcra-context-mcp: An MCP server to access your Fulcra Context data
 
+<a href="https://glama.ai/mcp/servers/@fulcradynamics/fulcra-context-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@fulcradynamics/fulcra-context-mcp/badge" />
+</a>
+
 This is an MCP server that provides tools and resources to call the Fulcra API using [`fulcra-api`](https://github.com/fulcradynamics/fulcra-api-python).
 
 There is a public instance of this server running at `https://mcp.fulcradynamics.com/mcp`.  See [https://fulcradynamics.github.io/developer-docs/mcp-server/](https://fulcradynamics.github.io/developer-docs/mcp-server/) to get started quickly.  This repo is primarily for users who need to run the server locally, want to see under the hood, or want to help contribute.
