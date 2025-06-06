@@ -6,6 +6,8 @@ import time
 from starlette.responses import JSONResponse
 from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.settings import ClientRegistrationOptions, RevocationOptions
+from mcp.server.session import ServerSession
+
 from mcp.server.auth.provider import (
     AccessToken,
     AuthorizationCode,
@@ -428,7 +430,121 @@ async def callback_handler(request: Request) -> Response:
     raise HTTPException(500, "Unexpected error")
 
 
+class OpenAIWorkaroundMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        #logger.info(f"Request received (ASGI): method={scope['method']}, path={scope['path']}")
+
+        if scope["path"] == "/register":
+            logger.info("Intercepted /register request (ASGI). Attempting to modify 'token_endpoint_auth_method'.")
+
+            # Read the entire request body from the `receive` channel
+            body_chunks = []
+            more_body = True
+            while more_body:
+                message = await receive()
+                if message["type"] != "http.request":
+                    # This case should ideally be handled based on the specific message type
+                    # For now, if we encounter a non-http.request message while expecting body,
+                    # we'll log and proceed without body modification, passing the message along.
+                    # A more robust solution might involve buffering these messages or erroring.
+                    logger.warning(f"Unexpected ASGI message type '{message['type']}' received while reading body for /register.")
+                    
+                    # To proceed, we need to reconstruct a receive that first yields this unexpected message,
+                    # then continues with the original receive. This is complex.
+                    # A simpler, though less perfect, approach for this edge case is to bail out of modification.
+                    
+                    # For this implementation, we'll assume that if modification is triggered,
+                    # we fully consume the body or an error occurs.
+                    # If a disconnect or other message appears mid-body, it's an issue.
+                    # Let's assume standard flow: one or more http.request messages, then other types.
+                    # If the first message isn't http.request, we can't get a body.
+                    if not body_chunks and message.get("body") is None: # No body part in first message
+                         logger.warning("No body found in first message for /register. Bypassing modification.")
+                         
+                         # Need to make sure the message we just consumed is passed on
+                         async def pass_through_receive():
+                             yield message # The message we just consumed
+                             while True:
+                                 yield await receive() # Subsequent messages from original stream
+
+                         await self.app(scope, pass_through_receive(), send)
+                         return
+
+                body_chunks.append(message.get("body", b""))
+                more_body = message.get("more_body", False)
+                if message["type"] == "http.disconnect": # Client disconnected
+                    logger.warning("Client disconnected while reading body for /register.")
+                    # No response can be sent; the connection is closed.
+                    # The server (e.g., Uvicorn) will handle logging this.
+                    # We should not proceed to call self.app.
+                    return
+
+
+            original_body_bytes = b"".join(body_chunks)
+            new_body_bytes = original_body_bytes
+
+            if original_body_bytes:
+                try:
+                    body_str = original_body_bytes.decode('utf-8')
+                    data = json.loads(body_str)
+                    
+                    if isinstance(data, dict) and data.get("token_endpoint_auth_method") == "client_secret_basic":
+                        data["token_endpoint_auth_method"] = "client_secret_post"
+                        new_body_bytes = json.dumps(data).encode('utf-8')
+                        # Removed the line: new_body_bytes = bytes() which was a bug
+                        logger.info("Successfully modified 'token_endpoint_auth_method' to 'client_secret_post' for /register request (ASGI).")
+                    else:
+                        logger.info("'token_endpoint_auth_method' was not 'client_secret_basic' or key not present in /register request body (ASGI). No changes made.")
+                
+                except json.JSONDecodeError:
+                    logger.warning("Request body for /register was not valid JSON (ASGI). Proceeding with original body.", exc_info=True)
+                except UnicodeDecodeError:
+                    logger.warning("Request body for /register could not be decoded as UTF-8 (ASGI). Proceeding with original body.", exc_info=True)
+                except Exception:
+                    logger.error("An unexpected error occurred while trying to modify the request body for /register (ASGI). Proceeding with original body.", exc_info=True)
+            else:
+                logger.info("Request body for /register is empty (ASGI). No modification attempted.")
+
+            # This flag ensures we only send our synthetic body message once.
+            sent_synthetic_body = False
+
+            async def new_receive_for_app():
+                nonlocal sent_synthetic_body
+                if not sent_synthetic_body:
+                    sent_synthetic_body = True
+                    return {"type": "http.request", "body": new_body_bytes, "more_body": False}
+                else:
+                    # After sending the (potentially modified) body, subsequent calls
+                    # to receive() should get messages from the original stream
+                    # that came *after* the body was fully read (e.g., http.disconnect).
+                    return await receive()
+
+            await self.app(scope, new_receive_for_app, send)
+
+        else: # Not /register path
+            await self.app(scope, receive, send)
+
+app.add_middleware(OpenAIWorkaroundMiddleware)
 app.mount("/", mcp_asgi_app)
+
+
+old__received_request = ServerSession._received_request
+
+async def _received_request(self, *args, **kwargs):
+    try:
+        return await old__received_request(self, *args, **kwargs)
+    except RuntimeError:
+        pass
+
+# pylint: disable-next=protected-access
+ServerSession._received_request = _received_request
 
 
 if __name__ == "__main__":
