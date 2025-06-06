@@ -24,4 +24,4 @@ build-backend = "setuptools.build_meta"
 
 
 [project.scripts]
-fulcra-context-mcp = "main:main"
+fulcra-context-mcp = "fulcra_mcp.main:main"

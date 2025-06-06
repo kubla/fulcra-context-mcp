@@ -25,5 +25,5 @@ RUN uv sync --locked
 
 
 ENTRYPOINT ["uv"]
-CMD ["run", "python", "main.py"]
+CMD ["run", "fulcra-context-mcp"]
 
