@@ -10,3 +10,7 @@ When run on its own (or when `FULCRA_ENVIRONMENT` is set to `stdio`), it acts as
 
 - Both the [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) and [mcp-remote](https://github.com/geelen/mcp-remote) tools can be useful in debugging.
 
+## Bugs / Feature Requests
+
+Please feel free to reach out via [the GitHub repo for this project](https://github.com/fulcradynamics/fulcra-context-mcp) or [join our Discord](https://discord.com/invite/aunahVEnPU) to reach out directly.  Email also works (`support@fulcradynamics.com`).
+
