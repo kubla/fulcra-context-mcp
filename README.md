@@ -1,4 +1,4 @@
-## mcp-server-python: An MCP server to access your Fulcra Context account and datastore
+## fulcra-context-mcp: An MCP server to access your Fulcra Context data
 
 This is an MCP server that provides tools and resources to call the Fulcra API using `fulcra-api`.
 
