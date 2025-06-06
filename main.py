@@ -332,9 +332,6 @@ async def get_metric_time_series(
         end_time=end_time,
         **kwargs,
     )
-    # Convert DataFrame to JSON. `orient='records'` gives a list of dicts.
-    # `date_format='iso'` ensures datetimes are ISO8601 strings.
-    # `default_handler=str` can help with any other non-serializable types, though less likely with typical DataFrame content.
     return f"Time series data for {metric_name} from {start_time} to {end_time}: " + time_series_df.to_json(orient="records", date_format="iso", default_handler=str)
 
 
@@ -473,6 +470,8 @@ async def callback_handler(request: Request) -> Response:
     raise HTTPException(500, "Unexpected error")
 
 
+# OpenAI sends an invalid token_endpoint_auth_method, so we ignore that with this
+# middleware.
 class OpenAIWorkaroundMiddleware:
     def __init__(self, app):
         self.app = app
@@ -487,27 +486,13 @@ class OpenAIWorkaroundMiddleware:
         if scope["path"] == "/register":
             logger.info("Intercepted /register request (ASGI). Attempting to modify 'token_endpoint_auth_method'.")
 
-            # Read the entire request body from the `receive` channel
             body_chunks = []
             more_body = True
             while more_body:
                 message = await receive()
                 if message["type"] != "http.request":
-                    # This case should ideally be handled based on the specific message type
-                    # For now, if we encounter a non-http.request message while expecting body,
-                    # we'll log and proceed without body modification, passing the message along.
-                    # A more robust solution might involve buffering these messages or erroring.
                     logger.warning(f"Unexpected ASGI message type '{message['type']}' received while reading body for /register.")
                     
-                    # To proceed, we need to reconstruct a receive that first yields this unexpected message,
-                    # then continues with the original receive. This is complex.
-                    # A simpler, though less perfect, approach for this edge case is to bail out of modification.
-                    
-                    # For this implementation, we'll assume that if modification is triggered,
-                    # we fully consume the body or an error occurs.
-                    # If a disconnect or other message appears mid-body, it's an issue.
-                    # Let's assume standard flow: one or more http.request messages, then other types.
-                    # If the first message isn't http.request, we can't get a body.
                     if not body_chunks and message.get("body") is None: # No body part in first message
                          logger.warning("No body found in first message for /register. Bypassing modification.")
                          
@@ -524,9 +509,6 @@ class OpenAIWorkaroundMiddleware:
                 more_body = message.get("more_body", False)
                 if message["type"] == "http.disconnect": # Client disconnected
                     logger.warning("Client disconnected while reading body for /register.")
-                    # No response can be sent; the connection is closed.
-                    # The server (e.g., Uvicorn) will handle logging this.
-                    # We should not proceed to call self.app.
                     return
 
 
@@ -555,7 +537,6 @@ class OpenAIWorkaroundMiddleware:
             else:
                 logger.info("Request body for /register is empty (ASGI). No modification attempted.")
 
-            # This flag ensures we only send our synthetic body message once.
             sent_synthetic_body = False
 
             async def new_receive_for_app():
@@ -564,14 +545,11 @@ class OpenAIWorkaroundMiddleware:
                     sent_synthetic_body = True
                     return {"type": "http.request", "body": new_body_bytes, "more_body": False}
                 else:
-                    # After sending the (potentially modified) body, subsequent calls
-                    # to receive() should get messages from the original stream
-                    # that came *after* the body was fully read (e.g., http.disconnect).
                     return await receive()
 
             await self.app(scope, new_receive_for_app, send)
 
-        else: # Not /register path
+        else:
             await self.app(scope, receive, send)
 
 app.add_middleware(OpenAIWorkaroundMiddleware)
