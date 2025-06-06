@@ -3,7 +3,6 @@ import json
 import secrets
 import time
 
-from starlette.responses import JSONResponse
 from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.settings import ClientRegistrationOptions, RevocationOptions
 from mcp.server.session import ServerSession
@@ -405,6 +404,41 @@ async def get_sleep_cycles(
     # Convert DataFrame to JSON. `orient='records'` gives a list of dicts.
     # `date_format='iso'` ensures datetimes are ISO8601 strings.
     return f"Sleep cycles from {start_time} to {end_time}: " + sleep_cycles_df.to_json(orient="records", date_format="iso", default_handler=str)
+
+
+@mcp.tool()
+async def get_location_at_time(
+    time: datetime,
+    window_size: int = 14400,
+    reverse_geocode: bool | None = False,
+) -> str:
+    """Gets the user's location at the given time.
+
+    If no sample is available for the exact time, searches for the closest one up to
+    window_size seconds back. 
+
+    Result timestamps will include time zones. Always translate timestamps to the user's local
+    time zone when this is known.
+
+    Args:
+        time: The point in time to get the user's location for. Must include tz (ISO8601).
+        window_size: Optional. The size (in seconds) to look back (and optionally forward) for samples. Defaults to 14400.
+        include_after: Optional. When true, a sample that occurs after the requested time may be returned if it is the closest one. Defaults to False.
+    Returns:
+        A JSON string representing the location data.
+    """
+    fulcra = get_fulcra_object()
+    kwargs = {}
+    if window_size is not None:
+        kwargs["window_size"] = window_size
+    kwargs["include_after"] = True
+    kwargs["reverse_geocode"] = True
+    
+    location_data = fulcra.location_at_time(
+        time=time,
+        **kwargs,
+    )
+    return f"Location info at {time}: " + json.dumps(location_data)
 
 
 mcp_asgi_app = mcp.http_app(path="/")
