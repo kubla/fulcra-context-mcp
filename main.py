@@ -350,14 +350,12 @@ async def get_metric_samples(
         A JSON string representing a list of raw samples for the metric.
     """
     fulcra = get_fulcra_object()
-    samples_df = fulcra.metric_samples(
+    samples = fulcra.metric_samples(
         metric=metric_name,
         start_time=start_time,
         end_time=end_time,
     )
-    # Convert DataFrame to JSON. `orient='records'` gives a list of dicts.
-    # `date_format='iso'` ensures datetimes are ISO8601 strings.
-    return f"Raw samples for {metric_name} from {start_time} to {end_time}: " + samples_df.to_json(orient="records", date_format="iso", default_handler=str)
+    return f"Raw samples for {metric_name} from {start_time} to {end_time}: " + json.dumps(samples)
 
 
 @mcp.tool()
