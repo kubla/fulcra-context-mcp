@@ -2,6 +2,8 @@ from datetime import datetime
 import json
 import secrets
 import time
+import logging
+import sys
 
 from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.settings import ClientRegistrationOptions, RevocationOptions
@@ -27,18 +29,19 @@ import structlog
 import uvicorn
 
 OIDC_SCOPES = ["openid", "profile", "name", "email"]
-# XXX XXX XXX parameterize this
 SERVER_URL = "http://localhost:4499"
 
 class Settings(BaseSettings):
     oidc_server_url: str = SERVER_URL
-    fulcra_environment: str = "localdev"
+    fulcra_environment: str = "stdio"
     port: int = 8080
-    oidc_client_id: str = "tc92NeNkAg748rlxBbm79cKdG9AOAbfc"        # XXX XXX XXX XXX XXX
+    oidc_client_id: str | None = None
 
 settings = Settings()
 
 logger = structlog.getLogger(__name__)
+if settings.fulcra_environment == "localdev":
+    logging.basicConfig(format="%(message)s", stream=sys.stderr, level=logging.DEBUG)
 
 class FulcraOAuthProvider(OAuthProvider):
     def __init__(
@@ -86,7 +89,7 @@ class FulcraOAuthProvider(OAuthProvider):
             oidc_client_id=settings.oidc_client_id,
         )
         auth_url = fulcra.get_authorization_code_url(
-                redirect_uri=f"{settings.oidc_server_url}/callback",              # XXX XXX XXX
+                redirect_uri=f"{settings.oidc_server_url}/callback",
                 state=state,
         )
         return auth_url
@@ -239,7 +242,15 @@ mcp = FastMCP(
     auth=oauth_provider,
 )
 
+stdio_fulcra : FulcraAPI | None = None
 def get_fulcra_object() -> FulcraAPI:
+    global stdio_fulcra
+    if settings.fulcra_environment == "stdio":
+        if stdio_fulcra is not None:
+            return stdio_fulcra
+        else:
+            stdio_fulcra = FulcraAPI()
+            stdio_fulcra.authorize()
     mcp_access_token = get_access_token()
     if not mcp_access_token:
         raise HTTPException(401, "Not authenticated")
@@ -580,4 +591,7 @@ ServerSession._received_request = _received_request
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=settings.port)
+    if settings.fulcra_environment == "stdio":
+        mcp.run()
+    else:
+        uvicorn.run(app, host="0.0.0.0", port=settings.port)

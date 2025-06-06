@@ -1,8 +1,8 @@
 ## mcp-server-python
 
-This is a remote MCP server that provides tools and resources to call the Fulcra API from LLMs.  
+This is an MCP server that provides tools and resources to call the Fulcra API using `fulcra-api`.
 
-It handles the OAuth2 callback, but doesn't leak the exchanged tokens to MCP clients.  Instead, it keeps a mapping table in memory.
+When run on its own (or when `FULCRA_ENVIRONMENT` is set to `stdio`), it acts as a local MCP server.  Otherwise, it acts as a remote server.  It handles the OAuth2 callback, but doesn't leak the exchanged tokens to MCP clients.  Instead, it keeps a mapping table in memory.
 
 ### Debugging
 
