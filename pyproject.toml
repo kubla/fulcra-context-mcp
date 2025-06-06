@@ -22,5 +22,6 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 
-#[project.scripts]
-#fulcra-context-mcp = "main.py"
+
+[project.scripts]
+fulcra-context-mcp = "main:main"

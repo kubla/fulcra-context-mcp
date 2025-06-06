@@ -616,9 +616,11 @@ async def _received_request(self, *args, **kwargs):
 # pylint: disable-next=protected-access
 ServerSession._received_request = _received_request
 
-
-if __name__ == "__main__":
+def main():
     if settings.fulcra_environment == "stdio":
         mcp.run()
     else:
         uvicorn.run(app, host="0.0.0.0", port=settings.port)
+
+if __name__ == "__main__":
+    main()
