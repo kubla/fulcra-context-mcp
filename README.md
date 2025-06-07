@@ -33,7 +33,7 @@ Similar config using `uvx`:
         "fulcra_context": {
             "command": "uvx",
             "args": [
-                "fulcra-context-mcp"
+                "fulcra-context-mcp@latest"
             ]
         }
     }
