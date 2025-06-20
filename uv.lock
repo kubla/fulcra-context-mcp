@@ -214,7 +214,7 @@ standard = [
 
 [[package]]
 name = "fastmcp"
-version = "2.7.0"
+version = "2.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "authlib" },
@@ -226,28 +226,28 @@ dependencies = [
     { name = "rich" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ad/a5/d156051c08915c2ca7c97583dac4547f17fcbf09918727c36ca0e6cd6ea7/fastmcp-2.7.0.tar.gz", hash = "sha256:6a081400ed46e1b74fbda3f5b7f806180f4091b7bf36bd4c52d7074934767004", size = 1590831, upload-time = "2025-06-05T19:03:51.778Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/a3/d5b2c47b25d13cca8108e077bf4a72b255b113fb525f4c22ce9ca5af9b08/fastmcp-2.8.0.tar.gz", hash = "sha256:8a6427ece23d0a324d4be2043598c8b89a91b2b5688873d8ae1e7aeaa7960513", size = 2554559, upload-time = "2025-06-11T01:31:24.069Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/74/3f/88fd54bbec9a3c619f94c61b84473a49c3af24582a9cc64059fdefeef98b/fastmcp-2.7.0-py3-none-any.whl", hash = "sha256:5e0827a37bc71656edebb5f217423ce6f838d8f0e42f79c9f803349c0366fc80", size = 127452, upload-time = "2025-06-05T19:03:50.129Z" },
+    { url = "https://files.pythonhosted.org/packages/2c/05/b9b0ee091578ff37da8ef0bee8fff80bed95daff61834982a6064e3e327f/fastmcp-2.8.0-py3-none-any.whl", hash = "sha256:772468e98dacd55ab3381f49dd2583341c41b0e5ef0d9c7620fd43833d949c0c", size = 137492, upload-time = "2025-06-11T01:31:22.195Z" },
 ]
 
 [[package]]
 name = "fulcra-api"
-version = "0.1.26"
+version = "0.1.27"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "pandas" },
     { name = "pyarrow" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ae/b9/71e35245b14fbb541943dba0abafd1eb83992b23b898636a79102dce0936/fulcra_api-0.1.26.tar.gz", hash = "sha256:4fc3ae1dfd8cce24251091de6b8665b1e83cf8bc224462c2d84021ab555f516a", size = 16902, upload-time = "2025-06-06T19:24:13.075Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f6/13/6771943ae4aa832ca9f7058ea2c631b809fce1832b1541a169bb761c709f/fulcra_api-0.1.27.tar.gz", hash = "sha256:25b4dafadec37c72f4e58eb831e2261f50c23e2fcfc07c30d306455346d1fe8a", size = 17072, upload-time = "2025-06-18T20:51:47.665Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/70/d1/cbc17b3ab2056c105ff330fa97bbc3cf150d734670acb23cf2797f0119cf/fulcra_api-0.1.26-py3-none-any.whl", hash = "sha256:c01a0d747c8b31a783e38186a872fed1de098fe708f4ab67152bf95968d0e502", size = 17684, upload-time = "2025-06-06T19:24:11.992Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/f3/e6bf03e7069204635991c56ca1f41d05af1cf3efa0c7495eb40b9c358650/fulcra_api-0.1.27-py3-none-any.whl", hash = "sha256:ca997d3b9f58c82b3c436e4d47f59c4b7c4cb769e73aef073d26bbd78054dd1c", size = 17815, upload-time = "2025-06-18T20:51:46.457Z" },
 ]
 
 [[package]]
 name = "fulcra-context-mcp"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi", extra = ["standard"] },
@@ -261,8 +261,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.12" },
-    { name = "fastmcp", specifier = ">=2.7.0" },
-    { name = "fulcra-api", specifier = ">=0.1.26" },
+    { name = "fastmcp", specifier = ">=2.8.0" },
+    { name = "fulcra-api", specifier = ">=0.1.27" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.9.3" },
     { name = "structlog", specifier = ">=25.4.0" },
