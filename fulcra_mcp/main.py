@@ -32,9 +32,10 @@ SERVER_URL = "http://localhost:4499"
 
 
 class Settings(BaseSettings):
+    state_path: str = "state/"
     oidc_server_url: str = SERVER_URL
     fulcra_environment: str = "stdio"
-    port: int = 8080
+    port: int = 4499
     oidc_client_id: str | None = None
 
 
@@ -62,7 +63,6 @@ class FulcraOAuthProvider(OAuthProvider):
             revocation_options=revocation_options,
             required_scopes=required_scopes,
         )
-        self.clients: dict[str, OAuthClientInformationFull] = {}
         self.auth_codes: dict[str, AuthorizationCode] = {}
         self.tokens: dict[str, AccessToken] = {}
         self.state_mapping: dict[str, dict[str, str]] = {}
@@ -70,11 +70,23 @@ class FulcraOAuthProvider(OAuthProvider):
 
     async def get_client(self, client_id: str) -> OAuthClientInformationFull | None:
         """Get OAuth client information."""
-        return self.clients.get(client_id)
+
+        try:
+            with open(f"{settings.state_path}{client_id}.json", "r") as c:
+                return OAuthClientInformationFull.model_validate_json(c.read())
+        except FileNotFoundError:
+            return None
+        except Exception as exc:
+            logger.error("Caught exception while loading client info", exc_info=exc)
+            return None
 
     async def register_client(self, client_info: OAuthClientInformationFull):
         """Register a new OAuth client."""
-        self.clients[client_info.client_id] = client_info
+        try:
+            with open(f"{settings.state_path}{client_info.client_id}.json", "w") as c:
+                c.write(client_info.model_dump_json())
+        except Exception as exc:
+            logger.error("Caught exception while writing client info", exc_info=exc)
 
     async def authorize(
         self, client: OAuthClientInformationFull, params: AuthorizationParams
@@ -676,6 +688,9 @@ def main():
     if settings.fulcra_environment == "stdio":
         mcp.run()
     else:
+        if not os.path.exists(settings.state_path):
+            os.mkdir(settings.state_path)
+
         uvicorn.run(app, host="0.0.0.0", port=settings.port)
 
 
