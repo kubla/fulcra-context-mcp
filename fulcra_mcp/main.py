@@ -55,7 +55,7 @@ class FulcraOAuthProvider(OAuthProvider):
         required_scopes: list[str] | None = None,
     ):
         super().__init__(
-            base_url=os.environ.get("BASE_URL", ""),
+            base_url=os.environ.get("BASE_URL", SERVER_URL),
             issuer_url=issuer_url,
             service_documentation_url=service_documentation_url,
             client_registration_options=client_registration_options,
@@ -249,12 +249,15 @@ stdio_fulcra: FulcraAPI | None = None
 
 def get_fulcra_object() -> FulcraAPI:
     global stdio_fulcra
+
     if settings.fulcra_environment == "stdio":
         if stdio_fulcra is not None:
             return stdio_fulcra
         else:
             stdio_fulcra = FulcraAPI()
             stdio_fulcra.authorize()
+            return stdio_fulcra
+
     mcp_access_token = get_access_token()
     if not mcp_access_token:
         raise HTTPException(401, "Not authenticated")
