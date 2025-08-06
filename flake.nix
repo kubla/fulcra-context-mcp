@@ -1,6 +1,6 @@
 {
 
-  description = "annotations transform/load task";
+  description = "Fulcra MCP Server";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixpkgs-unstable";
