@@ -13,3 +13,7 @@ wheels/
 .mypy_cache
 .DS_Store
 .env
+.direnv
+.venv
+
+
