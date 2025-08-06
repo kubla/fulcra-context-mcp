@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import secrets
 import sys
 import time
@@ -29,12 +28,11 @@ from pydantic import AnyHttpUrl
 from pydantic_settings import BaseSettings
 
 OIDC_SCOPES = ["openid", "profile", "name", "email"]
-SERVER_URL = "http://localhost:4499"
 
 
 class Settings(BaseSettings):
     state_path: Path = Path("state/").resolve()
-    oidc_server_url: str = SERVER_URL
+    oidc_server_url: str = "http://localhost:4499"
     fulcra_environment: str = "stdio"
     port: int = 4499
     oidc_client_id: str | None = None
@@ -57,7 +55,7 @@ class FulcraOAuthProvider(OAuthProvider):
         required_scopes: list[str] | None = None,
     ):
         super().__init__(
-            base_url=os.environ.get("BASE_URL", SERVER_URL),
+            base_url=settings.oidc_server_url,
             issuer_url=issuer_url,
             service_documentation_url=service_documentation_url,
             client_registration_options=client_registration_options,
