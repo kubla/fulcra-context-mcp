@@ -5,6 +5,7 @@ import secrets
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
 
 import structlog
 import uvicorn
@@ -32,7 +33,7 @@ SERVER_URL = "http://localhost:4499"
 
 
 class Settings(BaseSettings):
-    state_path: str = "state/"
+    state_path: Path = Path("state/").resolve()
     oidc_server_url: str = SERVER_URL
     fulcra_environment: str = "stdio"
     port: int = 4499
@@ -71,8 +72,13 @@ class FulcraOAuthProvider(OAuthProvider):
     async def get_client(self, client_id: str) -> OAuthClientInformationFull | None:
         """Get OAuth client information."""
 
+        client_filepath = (settings.state_path / f"{client_id}.json").resolve()
+
+        if not client_filepath.is_relative_to(settings.state_path):
+            return None
+
         try:
-            with open(f"{settings.state_path}{client_id}.json", "r") as c:
+            with client_filepath.open(mode="r") as c:
                 return OAuthClientInformationFull.model_validate_json(c.read())
         except FileNotFoundError:
             return None
@@ -82,8 +88,16 @@ class FulcraOAuthProvider(OAuthProvider):
 
     async def register_client(self, client_info: OAuthClientInformationFull):
         """Register a new OAuth client."""
+
+        client_filepath = (
+            settings.state_path / f"{client_info.client_id}.json"
+        ).resolve()
+
+        if not client_filepath.is_relative_to(settings.state_path):
+            return None
+
         try:
-            with open(f"{settings.state_path}{client_info.client_id}.json", "w") as c:
+            with client_filepath.open(mode="w") as c:
                 c.write(client_info.model_dump_json())
         except Exception as exc:
             logger.error("Caught exception while writing client info", exc_info=exc)
@@ -688,8 +702,7 @@ def main():
     if settings.fulcra_environment == "stdio":
         mcp.run()
     else:
-        if not os.path.exists(settings.state_path):
-            os.mkdir(settings.state_path)
+        settings.state_path.mkdir(parents=True, exist_ok=True)
 
         uvicorn.run(app, host="0.0.0.0", port=settings.port)
 
