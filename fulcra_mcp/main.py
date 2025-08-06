@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     fulcra_environment: str = "stdio"
     port: int = 4499
     oidc_client_id: str | None = None
+    fulcra_oidc_domain: str | None = None
+    fulcra_api: str | None = None
 
 
 settings = Settings()
@@ -114,6 +116,8 @@ class FulcraOAuthProvider(OAuthProvider):
         }
         fulcra = FulcraAPI(
             oidc_client_id=settings.oidc_client_id,
+            oidc_domain=settings.fulcra_oidc_domain,
+            oidc_audience=settings.fulcra_api,
         )
         auth_url = fulcra.get_authorization_code_url(
             redirect_uri=f"{settings.oidc_server_url}/callback",
