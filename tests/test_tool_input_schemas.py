@@ -1,0 +1,164 @@
+import asyncio
+import json
+from collections.abc import Iterable
+
+import pytest
+
+
+BOOLEAN_VALUES = (True, False)
+NUMERIC_DELTAS = (1, 2, -1, -2, 3)
+
+
+def _schema_declares_boolean(schema: dict) -> bool:
+    if not isinstance(schema, dict):
+        return False
+
+    schema_type = schema.get("type")
+    if isinstance(schema_type, str):
+        if schema_type == "boolean":
+            return True
+    elif isinstance(schema_type, Iterable):
+        if "boolean" in schema_type:
+            return True
+
+    const_value = schema.get("const")
+    if type(const_value) is bool:  # noqa: E721 - we care about exact bool
+        return True
+
+    enum_values = schema.get("enum") or []
+    if any(type(value) is bool for value in enum_values):
+        return True
+
+    for key in ("anyOf", "oneOf", "allOf"):
+        if any(_schema_declares_boolean(subschema) for subschema in schema.get(key, [])):
+            return True
+
+    return False
+
+
+def _schema_declares_numeric(schema: dict) -> set[str]:
+    kinds: set[str] = set()
+    if not isinstance(schema, dict):
+        return kinds
+
+    schema_type = schema.get("type")
+    if isinstance(schema_type, str):
+        kinds.update(_type_to_numeric_kind(schema_type))
+    elif isinstance(schema_type, Iterable):
+        for item in schema_type:
+            kinds.update(_type_to_numeric_kind(item))
+
+    const_value = schema.get("const")
+    if isinstance(const_value, (int, float)) and not isinstance(const_value, bool):
+        if isinstance(const_value, int):
+            kinds.add("integer")
+        else:
+            kinds.add("number")
+
+    enum_values = schema.get("enum") or []
+    for value in enum_values:
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            kinds.add("integer")
+        elif isinstance(value, float):
+            kinds.add("number")
+
+    for key in ("anyOf", "oneOf", "allOf"):
+        for subschema in schema.get(key, []):
+            kinds.update(_schema_declares_numeric(subschema))
+
+    return kinds
+
+
+def _type_to_numeric_kind(schema_type: str) -> set[str]:
+    if schema_type in {"integer", "number"}:
+        return {schema_type}
+    return set()
+
+
+def _validate_values(schema: dict, values: Iterable, *, jsonschema_module) -> tuple[list, list[str]]:
+    validator = jsonschema_module.Draft202012Validator(schema)
+    accepted: list = []
+    rejected: list[str] = []
+    for value in values:
+        try:
+            validator.validate(value)
+        except jsonschema_module.ValidationError as exc:
+            rejected.append(f"{value!r}: {exc.message}")
+        else:
+            accepted.append(value)
+    return accepted, rejected
+
+
+def _numeric_test_values(schema: dict, *, expect_integer: bool) -> list:
+    default = schema.get("default")
+    candidates: list = []
+
+    if isinstance(default, (int, float)) and not isinstance(default, bool):
+        for delta in NUMERIC_DELTAS:
+            candidate = default + delta
+            if expect_integer:
+                candidate = int(round(candidate))
+            else:
+                candidate = float(candidate)
+            if candidate == default:
+                continue
+            candidates.append(candidate)
+
+    if not candidates:
+        start = 1
+        while len(candidates) < 5:
+            candidate = start if expect_integer else float(start)
+            candidates.append(candidate)
+            start += 1
+
+    unique_candidates: list = []
+    seen: set = set()
+    for value in candidates:
+        if value in seen:
+            continue
+        seen.add(value)
+        unique_candidates.append(value)
+
+    return unique_candidates
+
+
+def test_tool_input_schemas_accept_multiple_values():
+    jsonschema_module = pytest.importorskip("jsonschema")
+    pytest.importorskip("structlog")
+    from fulcra_mcp import main as fulcra_main
+
+    tools = asyncio.run(fulcra_main.mcp._list_tools())
+
+    failures: list[str] = []
+
+    for tool in tools:
+        parameters = tool.parameters or {}
+        properties = parameters.get("properties", {})
+        for property_name, property_schema in properties.items():
+            if _schema_declares_boolean(property_schema):
+                accepted, rejected = _validate_values(
+                    property_schema, BOOLEAN_VALUES, jsonschema_module=jsonschema_module
+                )
+                if len(set(accepted)) < len(BOOLEAN_VALUES):
+                    failures.append(
+                        "Boolean parameter validation failed for "
+                        f"{tool.name}.{property_name}: accepted {accepted} but rejected {json.dumps(rejected)}"
+                    )
+
+            numeric_kinds = _schema_declares_numeric(property_schema)
+            if numeric_kinds:
+                expect_integer = "integer" in numeric_kinds and "number" not in numeric_kinds
+                values_to_try = _numeric_test_values(property_schema, expect_integer=expect_integer)
+                accepted, rejected = _validate_values(
+                    property_schema, values_to_try, jsonschema_module=jsonschema_module
+                )
+                if len(set(accepted)) < 2:
+                    failures.append(
+                        "Numeric parameter validation failed for "
+                        f"{tool.name}.{property_name}: accepted {accepted} but rejected {json.dumps(rejected)}"
+                    )
+
+    if failures:
+        pytest.fail("\n".join(failures))
