@@ -1,12 +1,15 @@
 import asyncio
 import json
 from collections.abc import Iterable
+from datetime import datetime, timezone
 
 import pytest
 
 
 BOOLEAN_VALUES = (True, False)
 NUMERIC_DELTAS = (1, 2, -1, -2, 3)
+STRING_BOOLEAN_VALUES = ("true", "false", "1", "0")
+STRING_NUMERIC_VALUES = ("900", "60.5")
 
 
 def _schema_declares_boolean(schema: dict) -> bool:
@@ -162,3 +165,124 @@ def test_tool_input_schemas_accept_multiple_values():
 
     if failures:
         pytest.fail("\n".join(failures))
+
+
+def test_tool_input_schemas_accept_string_forms():
+    jsonschema_module = pytest.importorskip("jsonschema")
+    pytest.importorskip("structlog")
+    from fulcra_mcp import main as fulcra_main
+
+    tools = asyncio.run(fulcra_main.mcp._list_tools())
+    tool_schemas = {
+        tool.name: (tool.parameters or {}).get("properties", {}) for tool in tools
+    }
+
+    boolean_targets = [
+        ("get_metric_time_series", "replace_nulls"),
+        ("get_sleep_cycles", "clip_to_range"),
+        ("get_location_at_time", "reverse_geocode"),
+        ("get_location_time_series", "reverse_geocode"),
+    ]
+    for tool_name, property_name in boolean_targets:
+        schema = tool_schemas[tool_name][property_name]
+        accepted, rejected = _validate_values(
+            schema, STRING_BOOLEAN_VALUES, jsonschema_module=jsonschema_module
+        )
+        assert set(STRING_BOOLEAN_VALUES).issubset(set(accepted)), (
+            f"Boolean string validation failed for {tool_name}.{property_name}: "
+            f"accepted={accepted}, rejected={json.dumps(rejected)}"
+        )
+
+    numeric_targets = [
+        ("get_metric_time_series", "sample_rate"),
+        ("get_location_time_series", "sample_rate"),
+        ("get_location_time_series", "change_meters"),
+    ]
+    for tool_name, property_name in numeric_targets:
+        schema = tool_schemas[tool_name][property_name]
+        accepted, rejected = _validate_values(
+            schema, STRING_NUMERIC_VALUES, jsonschema_module=jsonschema_module
+        )
+        assert set(STRING_NUMERIC_VALUES).issubset(set(accepted)), (
+            f"Numeric string validation failed for {tool_name}.{property_name}: "
+            f"accepted={accepted}, rejected={json.dumps(rejected)}"
+        )
+
+
+def test_tools_normalize_string_arguments(monkeypatch):
+    pytest.importorskip("structlog")
+    from fulcra_mcp import main as fulcra_main
+
+    class DummyFrame:
+        def to_json(self, **kwargs):
+            return "{}"
+
+    class DummyFulcra:
+        def __init__(self):
+            self.metric_kwargs = None
+            self.sleep_kwargs = None
+            self.location_kwargs = None
+            self.location_series_kwargs = None
+
+        def metric_time_series(self, *, metric, start_time, end_time, **kwargs):
+            self.metric_kwargs = kwargs
+            return DummyFrame()
+
+        def sleep_cycles(self, *, start_time, end_time, **kwargs):
+            self.sleep_kwargs = kwargs
+            return DummyFrame()
+
+        def location_at_time(self, *, time, **kwargs):
+            self.location_kwargs = kwargs
+            return {"location": "here"}
+
+        def location_time_series(self, *, start_time, end_time, **kwargs):
+            self.location_series_kwargs = kwargs
+            return [{"location": "there"}]
+
+    dummy_fulcra = DummyFulcra()
+    monkeypatch.setattr(fulcra_main, "get_fulcra_object", lambda: dummy_fulcra)
+
+    now = datetime.now(timezone.utc)
+
+    async def invoke_tools():
+        await fulcra_main.get_metric_time_series.fn(
+            metric_name="steps",
+            start_time=now,
+            end_time=now,
+            sample_rate="120",
+            replace_nulls="true",
+        )
+        await fulcra_main.get_sleep_cycles.fn(
+            start_time=now,
+            end_time=now,
+            clip_to_range="0",
+        )
+        await fulcra_main.get_location_at_time.fn(
+            time=now,
+            reverse_geocode="1",
+        )
+        await fulcra_main.get_location_time_series.fn(
+            start_time=now,
+            end_time=now,
+            change_meters="5.5",
+            sample_rate="600",
+            reverse_geocode="false",
+        )
+
+    asyncio.run(invoke_tools())
+
+    assert dummy_fulcra.metric_kwargs is not None
+    assert dummy_fulcra.metric_kwargs["sample_rate"] == pytest.approx(120.0)
+    assert dummy_fulcra.metric_kwargs["replace_nulls"] is True
+
+    assert dummy_fulcra.sleep_kwargs["clip_to_range"] is False
+
+    assert dummy_fulcra.location_kwargs["reverse_geocode"] is True
+    assert dummy_fulcra.location_kwargs["window_size"] == 14400
+
+    assert dummy_fulcra.location_series_kwargs is not None
+    assert dummy_fulcra.location_series_kwargs["change_meters"] == pytest.approx(5.5)
+    assert dummy_fulcra.location_series_kwargs["sample_rate"] == 600
+    assert dummy_fulcra.location_series_kwargs["look_back"] == 14400
+    assert dummy_fulcra.location_series_kwargs["reverse_geocode"] is False
