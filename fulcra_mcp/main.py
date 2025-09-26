@@ -360,6 +360,52 @@ def _coerce_float_arg(
     )
 
 
+def _coerce_list_arg(
+    value: list | tuple | str | None,
+    *,
+    parameter_name: str,
+    element_type: type,
+) -> list | None:
+    """Normalize list-like arguments that may be JSON-encoded strings."""
+
+    if value is None:
+        return None
+
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"Invalid JSON for '{parameter_name}': {value!r}. Expected a JSON array."
+            ) from exc
+        if not isinstance(parsed, list):
+            raise ValueError(
+                f"Invalid JSON for '{parameter_name}': {value!r}. Expected a JSON array."
+            )
+        value = parsed
+
+    if isinstance(value, tuple):
+        value = list(value)
+
+    if not isinstance(value, list):
+        raise ValueError(
+            f"Unsupported type for '{parameter_name}': {type(value).__name__}. Expected list, tuple, or JSON-encoded list."
+        )
+
+    def _is_valid_element(element) -> bool:
+        if element_type is int:
+            return isinstance(element, int) and not isinstance(element, bool)
+        return isinstance(element, element_type)
+
+    for index, element in enumerate(value):
+        if not _is_valid_element(element):
+            raise ValueError(
+                f"Invalid element at index {index} for '{parameter_name}': {element!r}. Expected {element_type.__name__} values."
+            )
+
+    return value
+
+
 @mcp.tool()
 async def get_workouts(start_time: datetime, end_time: datetime) -> str:
     """Get details about the workouts that the user has done during a period of time.
@@ -392,7 +438,7 @@ async def get_metric_time_series(
     end_time: datetime,
     sample_rate: float | int | str | None = None,
     replace_nulls: bool | str | None = None,
-    calculations: list[str] | None = None,
+    calculations: list[str] | str | None = None,
 ) -> str:
     """Get user's time-series data for a single Fulcra metric.
 
@@ -429,8 +475,13 @@ async def get_metric_time_series(
         kwargs["sample_rate"] = sample_rate_value
     if replace_nulls_value is not None:
         kwargs["replace_nulls"] = replace_nulls_value
-    if calculations is not None:
-        kwargs["calculations"] = calculations
+    calculations_value = _coerce_list_arg(
+        calculations,
+        parameter_name="calculations",
+        element_type=str,
+    )
+    if calculations_value is not None:
+        kwargs["calculations"] = calculations_value
 
     time_series_df = fulcra.metric_time_series(
         metric=metric_name,
@@ -484,8 +535,8 @@ async def get_sleep_cycles(
     start_time: datetime,
     end_time: datetime,
     cycle_gap: str | None = None,
-    stages: list[int] | None = None,
-    gap_stages: list[int] | None = None,
+    stages: list[int] | str | None = None,
+    gap_stages: list[int] | str | None = None,
     clip_to_range: bool | str | None = None,
 ) -> str:
     """Return sleep cycles summarized from sleep stages.
@@ -511,10 +562,20 @@ async def get_sleep_cycles(
     kwargs = {}
     if cycle_gap is not None:
         kwargs["cycle_gap"] = cycle_gap
-    if stages is not None:
-        kwargs["stages"] = stages
-    if gap_stages is not None:
-        kwargs["gap_stages"] = gap_stages
+    stages_value = _coerce_list_arg(
+        stages,
+        parameter_name="stages",
+        element_type=int,
+    )
+    if stages_value is not None:
+        kwargs["stages"] = stages_value
+    gap_stages_value = _coerce_list_arg(
+        gap_stages,
+        parameter_name="gap_stages",
+        element_type=int,
+    )
+    if gap_stages_value is not None:
+        kwargs["gap_stages"] = gap_stages_value
     clip_to_range_value = (
         True
         if clip_to_range is None

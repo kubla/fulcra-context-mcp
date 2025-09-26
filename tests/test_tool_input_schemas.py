@@ -10,6 +10,8 @@ BOOLEAN_VALUES = (True, False)
 NUMERIC_DELTAS = (1, 2, -1, -2, 3)
 STRING_BOOLEAN_VALUES = ("true", "false", "1", "0")
 STRING_NUMERIC_VALUES = ("900", "60.5")
+STRING_LIST_STR_VALUES = ('["max", "min"]', '["delta"]')
+STRING_LIST_INT_VALUES = ("[2,4]", "[1,3,5]")
 
 
 def _schema_declares_boolean(schema: dict) -> bool:
@@ -208,6 +210,21 @@ def test_tool_input_schemas_accept_string_forms():
             f"accepted={accepted}, rejected={json.dumps(rejected)}"
         )
 
+    list_targets = [
+        ("get_metric_time_series", "calculations", STRING_LIST_STR_VALUES),
+        ("get_sleep_cycles", "stages", STRING_LIST_INT_VALUES),
+        ("get_sleep_cycles", "gap_stages", STRING_LIST_INT_VALUES),
+    ]
+    for tool_name, property_name, values in list_targets:
+        schema = tool_schemas[tool_name][property_name]
+        accepted, rejected = _validate_values(
+            schema, values, jsonschema_module=jsonschema_module
+        )
+        assert set(values).issubset(set(accepted)), (
+            f"List string validation failed for {tool_name}.{property_name}: "
+            f"accepted={accepted}, rejected={json.dumps(rejected)}"
+        )
+
 
 def test_tools_normalize_string_arguments(monkeypatch):
     pytest.importorskip("structlog")
@@ -252,11 +269,14 @@ def test_tools_normalize_string_arguments(monkeypatch):
             end_time=now,
             sample_rate="120",
             replace_nulls="true",
+            calculations='["max", "min"]',
         )
         await fulcra_main.get_sleep_cycles.fn(
             start_time=now,
             end_time=now,
             clip_to_range="0",
+            stages="[2,4]",
+            gap_stages="[1,3]",
         )
         await fulcra_main.get_location_at_time.fn(
             time=now,
@@ -275,8 +295,11 @@ def test_tools_normalize_string_arguments(monkeypatch):
     assert dummy_fulcra.metric_kwargs is not None
     assert dummy_fulcra.metric_kwargs["sample_rate"] == pytest.approx(120.0)
     assert dummy_fulcra.metric_kwargs["replace_nulls"] is True
+    assert dummy_fulcra.metric_kwargs["calculations"] == ["max", "min"]
 
     assert dummy_fulcra.sleep_kwargs["clip_to_range"] is False
+    assert dummy_fulcra.sleep_kwargs["stages"] == [2, 4]
+    assert dummy_fulcra.sleep_kwargs["gap_stages"] == [1, 3]
 
     assert dummy_fulcra.location_kwargs["reverse_geocode"] is True
     assert dummy_fulcra.location_kwargs["window_size"] == 14400
